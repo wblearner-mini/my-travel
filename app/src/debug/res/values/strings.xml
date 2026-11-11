@@ -1,0 +1,4 @@
+<resources>
+    <!-- Debug builds are named apart from release ones. -->
+    <string name="app_name">我的旅游 调试</string>
+</resources>

@@ -1,0 +1,30 @@
+# Gradle / Android build
+.gradle/
+.kotlin/
+build/
+captures/
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+
+# Local SDK path and credentials (never commit)
+local.properties
+*.jks
+*.keystore
+
+# Host-specific resources: the server addresses the app trusts (see app/build.gradle.kts)
+app/local-res/
+
+# Server: venv, database, TLS certificate and key
+server/.venv/
+server/data/
+server/certs/
+__pycache__/
+.pytest_cache/
+app/src/main/res/raw/mytravel_server_cert.crt

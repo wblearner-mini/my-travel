@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Average colour of the icon artwork; only visible if the foreground hasn't drawn yet. -->
+    <color name="ic_launcher_background">#64D7EF</color>
+</resources>
