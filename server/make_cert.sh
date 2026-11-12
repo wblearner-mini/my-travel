@@ -4,7 +4,7 @@
 # Extra addresses come from the environment, e.g. LAN_IP=192.168.1.20 TAILSCALE_IP=100.x.y.z ./make_cert.sh
 set -e
 cd "$(dirname "$0")"
-mkdir -p certs
+mkdir -p certs ../app/src/main/res/raw
 umask 077
 openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -days 825 \
   -keyout certs/server.key -out certs/server.crt -subj "/CN=mytravel-local" \
