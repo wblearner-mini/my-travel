@@ -69,7 +69,7 @@ suspend fun parseHotelOrder(jpeg: ByteArray): Result<HotelExtract> = try {
 private fun JSONObject.str(name: String) = if (isNull(name)) null else getString(name).trim().ifEmpty { null }
 private fun JSONObject.int(name: String) = if (isNull(name)) null else getInt(name)
 
-private fun toExtract(o: JSONObject): HotelExtract {
+internal fun toExtract(o: JSONObject): HotelExtract {
     fun date(name: String) = if (o.isNull(name)) null else o.getJSONObject(name).let { PrintedDate(it.int("year"), it.int("month"), it.int("day")) }
     // Times are only kept when well-formed; anything else is treated as "not stated".
     fun time(name: String) = o.str(name)?.takeIf { Regex("""([01]\d|2[0-3]):[0-5]\d""").matches(it) }

@@ -57,9 +57,15 @@ private val legLock = Mutex()
 
 private fun overQps(r: Result<Leg>) = r.exceptionOrNull()?.message?.contains("QPS") == true
 
+/** Cache key of a leg: tied to both stops' coordinates and the travel mode, so a moved stop never shows a stale leg. */
+internal fun legKey(from: Stop, to: Stop, mode: TravelMode) = "${mode.name}:${from.lat},${from.lng}>${to.lat},${to.lng}"
+
+/** Whether AMap can take the whole day in one call: driving only, and at most [AMAP_MAX_VIAS] stops between the ends. */
+internal fun canNavigateAll(mode: TravelMode, stopCount: Int) = mode == TravelMode.Drive && stopCount - 2 <= AMAP_MAX_VIAS
+
 /** Plans one leg with AMap route planning 2.0. Never falls back to a straight line. */
 suspend fun planLeg(context: Context, from: Stop, to: Stop, mode: TravelMode): Result<Leg> {
-    val key = "${mode.name}:${from.lat},${from.lng}>${to.lat},${to.lng}"
+    val key = legKey(from, to, mode)
     legCache[key]?.let { return Result.success(it) }
     val r = legLock.withLock {
         legCache[key]?.let { return@withLock Result.success(it) }
@@ -255,7 +261,7 @@ fun RoutePanel(
             }
         }
         val vias = stops.size - 2
-        if (mode == TravelMode.Drive && vias <= AMAP_MAX_VIAS) {
+        if (canNavigateAll(mode, stops.size)) {
             Button(onClick = onNavigateAll) { Text(if (vias > 0) "全程导航（含 $vias 个途经点）" else "导航") }
         } else {
             Text(

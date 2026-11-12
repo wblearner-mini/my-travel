@@ -61,6 +61,11 @@
 - AI 回合以 `turn_id` 关联，联网搜索只有在本回合模型确实请求了该工具时才执行，防止客户端伪造搜索请求消耗费用。
 - 32 项 pytest 用例，上游全部用假实现，不产生费用。
 
+**测试与 CI**
+
+- App 的纯逻辑有 JVM 单元测试：按名称定位的匹配顺序、订单截图解析结果的校验、路线分段与“全程导航”的判断、距离和用时的显示。
+- GitHub Actions 每次推送都会运行服务端测试和 App 单元测试，并构建 debug 与 release 包；release 包开启 R8 代码混淆和资源压缩，缺少混淆规则时在 CI 里就会失败。
+
 **工程方法**
 
 本项目全程与 AI 编码助手协作开发，用一套明确的规则约束过程：
@@ -78,12 +83,34 @@ server/                 服务端（FastAPI）、测试、自签证书脚本
 
 ## 自己构建
 
-需要 Android SDK（compileSdk 37.2）、JDK 25、arm64 真机（高德 SDK 只提供 ARM 库）、以及你自己的各家服务凭证。
+### 动手前先估算一下
 
-1. 在仓库根目录建 `local.properties`（已被忽略），填入 `sdk.dir`、`AMAP_KEY`（高德 Android Key，需绑定你自己的包名和签名 SHA1），以及 `MYTRAVEL_SERVER_URL` / `MYTRAVEL_RELEASE_SERVER_URL`（你的服务端地址）。
-2. 服务端：按 `server/README.md` 建虚拟环境、配置上游凭证、用 `make_cert.sh` 生成自签证书、用管理命令创建账号。
-3. 如果服务端不在本机回环地址上，把它的地址加到 `app/local-res/xml/network_security_config.xml`（已被忽略，格式同 `app/src/main/res/xml/` 下的同名文件），App 只对这些地址信任这张自签证书。
-4. `./gradlew :app:assembleDebug`。
+这个 App 依赖好几家外部服务，而且必须先登录自己的服务端才能使用。建议先看看下面这些能不能准备好：
+
+| 需要准备 | 用来做什么 |
+| --- | --- |
+| 高德开放平台账号和 Android Key（绑定你自己的包名和签名 SHA1） | 地图、定位、搜索、路线规划 |
+| 阿里云百炼 API Key | AI 对话、订单截图识别 |
+| DeepSeek API Key | AI 联网搜索 |
+| 和风天气项目和 JWT 凭证（自己生成 Ed25519 密钥对） | 天气和官方预警 |
+| 一台能运行 Python 的电脑或服务器 | 运行服务端；App 登录后才能使用 |
+| arm64 Android 真机 | 高德 SDK 只提供 ARM 库 |
+
+百炼、DeepSeek、和风天气按各自平台的规则计费或提供免费额度，请以官方当前的说明为准。
+
+大致耗时（估计，未实测）：如果熟悉 Android 开发，各平台账号也已经实名认证，大约需要半天到一天；如果从注册账号开始，实名认证和申请 Key 可能还要多等一两天。
+
+### 构建步骤
+
+需要 Android SDK（compileSdk 37.2）和 JDK 25。
+
+> **必须先生成证书，再编译 App。** App 只信任自家服务端的自签证书。这张证书由 `server/make_cert.sh` 生成，并复制到 `app/src/main/res/raw/mytravel_server_cert.crt`（已被忽略，不在仓库里）。没有这一步，编译会因为找不到 `@raw/mytravel_server_cert` 而失败。
+
+1. 生成证书：在仓库根目录运行 `sh server/make_cert.sh`。服务端不只在本机回环地址上时，用 `LAN_IP=… TAILSCALE_IP=… sh server/make_cert.sh` 把地址写进证书。以后重新生成证书，也要重新编译 App。
+2. 在仓库根目录建 `local.properties`（已被忽略），填入 `sdk.dir`、`AMAP_KEY`（高德 Android Key），以及 `MYTRAVEL_SERVER_URL` / `MYTRAVEL_RELEASE_SERVER_URL`（你的服务端地址）。
+3. 服务端：按 `server/README.md` 建虚拟环境、配置上游凭证、用管理命令创建账号。
+4. 如果服务端不在本机回环地址上，把它的地址加到 `app/local-res/xml/network_security_config.xml`（已被忽略，格式同 `app/src/main/res/xml/` 下的同名文件），App 只对这些地址信任这张自签证书。
+5. `./gradlew :app:assembleDebug`。运行单元测试：`./gradlew :app:testDebugUnitTest`。
 
 ## 这个仓库里没有什么
 

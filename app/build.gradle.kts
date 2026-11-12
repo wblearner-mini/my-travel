@@ -57,7 +57,10 @@ android {
         }
         // No fallback: without a configured server the release app only reports that it can't connect.
         release {
-            isMinifyEnabled = false
+            // R8 shrinks and obfuscates the release APK; AMap's keep rules are in proguard-rules.pro.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfigs.findByName("release")?.let { signingConfig = it }
             // -PreleaseServerUrl=... overrides it for a one-off build (e.g. an emulator recording through adb reverse).
             buildConfigField("String", "SERVER_URL", "\"${(project.findProperty("releaseServerUrl") as String?) ?: localProps.getProperty("MYTRAVEL_RELEASE_SERVER_URL", "")}\"")
@@ -91,6 +94,10 @@ dependencies {
     implementation(libs.haze)
     implementation(libs.haze.blur)
     debugImplementation(libs.androidx.compose.ui.tooling)
+    // JVM unit tests for the pure logic (name matching, order parsing, route legs).
+    testImplementation(libs.junit)
+    // android.jar only has stubs for org.json; the real implementation lets HotelParse run on the JVM.
+    testImplementation(libs.json)
 }
 
 ksp {

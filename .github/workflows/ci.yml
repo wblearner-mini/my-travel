@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server:
+    name: Server tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: server/requirements.txt
+      - name: Install dependencies
+        run: python -m pip install -r server/requirements.txt
+      # All upstreams (Bailian, DeepSeek, QWeather) are fakes: no credentials, no cost.
+      - name: Run tests
+        working-directory: server
+        run: python -m pytest -q tests
+
+  app:
+    name: App unit tests and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - name: Install Android platform 37.2
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.2" > /dev/null
+      # The app trusts its server's self-signed certificate, which make_cert.sh creates and copies into
+      # app/src/main/res/raw/. A throwaway one is enough to compile; no AMap key or server address is needed.
+      - name: Create a throwaway server certificate
+        run: sh server/make_cert.sh
+      - name: Unit tests
+        run: ./gradlew :app:testDebugUnitTest
+      # The release build runs R8, so a missing keep rule fails here instead of on a phone.
+      - name: Build debug and release APKs
+        run: ./gradlew :app:assembleDebug :app:assembleRelease
